@@ -21,10 +21,12 @@ header span{font-size:14px;color:var(--sand)}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:24px;position:sticky;top:24px}
 label{display:block;font-weight:700;font-size:15px;color:var(--sand);margin:18px 0 8px}
 label:first-child{margin-top:0}
-input[type=text],input[type=date]{width:100%;font:inherit;font-size:17px;color:var(--cream);background:#120d09;border:1px solid var(--line);border-radius:12px;padding:13px 14px;outline:none}
-input:focus{border-color:var(--ember)}
-input:disabled{opacity:.55}
-input[type=date]{color-scheme:dark;direction:ltr;text-align:right}
+input[type=text],select{width:100%;font:inherit;font-size:17px;color:var(--cream);background:#120d09;border:1px solid var(--line);border-radius:12px;padding:13px 14px;outline:none}
+input:focus,select:focus{border-color:var(--ember)}
+input:disabled,select:disabled{opacity:.55}
+.date{display:grid;grid-template-columns:1fr 1.4fr 1.1fr;gap:8px}
+select{appearance:none;-webkit-appearance:none;cursor:pointer;padding:13px 10px;text-align:center;color-scheme:dark}
+select:focus{border-color:var(--ember)}
 .chk{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:15px;cursor:pointer;user-select:none}
 .chk input{width:20px;height:20px;accent-color:var(--ember)}
 .hint{font-size:13px;color:rgba(247,236,217,.55);margin-top:6px;line-height:1.7}
@@ -42,9 +44,13 @@ canvas{display:block;width:100%;height:auto}
   <div class="prev"><canvas id="cv" width="1080" height="1620" aria-label="معاينة الدعوة"></canvas></div>
   <div class="panel">
     <label for="nm">اسم الضيف</label>
-    <input id="nm" type="text" placeholder="الأستاذة أميرة القحطاني" autocomplete="off">
-    <label for="dt">تاريخ الفعالية</label>
-    <input id="dt" type="date">
+    <input id="nm" type="text" placeholder="الاسم" autocomplete="off">
+    <label for="dd">تاريخ الفعالية</label>
+    <div class="date" id="dt">
+      <select id="dd" aria-label="اليوم"><option value="">اليوم</option></select>
+      <select id="mm" aria-label="الشهر"><option value="">الشهر</option></select>
+      <select id="yy" aria-label="السنة"><option value="">السنة</option></select>
+    </div>
     <label class="chk"><input id="lock" type="checkbox">ثبّت التاريخ</label>
     <div class="hint">لما تثبّت التاريخ يبقى محفوظ لكل الدعوات الجاية على هالجهاز، وتكتب الاسم بس.</div>
     <button class="btn" id="dl">حمّل الدعوة</button>
@@ -53,7 +59,12 @@ canvas{display:block;width:100%;height:auto}
 </div>
 <script>
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
-const nm=document.getElementById('nm'),dt=document.getElementById('dt'),lock=document.getElementById('lock');
+const nm=document.getElementById('nm'),lock=document.getElementById('lock');
+const dd=document.getElementById('dd'),mm=document.getElementById('mm'),yy=document.getElementById('yy'),sels=[dd,mm,yy];
+const MONTHS=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+for(let i=1;i<=31;i++)dd.add(new Option(i,i));
+MONTHS.forEach((n,i)=>mm.add(new Option(`${n} (${i+1})`,i+1)));
+const Y=new Date().getFullYear();for(let y=Y;y<=Y+2;y++)yy.add(new Option(y,y));
 const base=new Image();base.src='base.jpg';
 const CREAM='rgb(247,236,217)';
 // مواقع النص مقاسة من التصميم الأصلي (1080×1620)
@@ -61,7 +72,7 @@ const NAME={right:532,cy:757,max:460,size:40},DATE={right:913,cy:1420,size:34};
 
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 
-function fmt(v){if(!v)return'';const[y,m,d]=v.split('-');return `${+d}/${+m}/${y}`}
+function fmt(){return dd.value&&mm.value&&yy.value?`${dd.value}/${mm.value}/${yy.value}`:''}
 
 function draw(){
   if(!base.complete)return;
@@ -73,20 +84,19 @@ function draw(){
     do{ctx.font=`800 ${s}px Almarai`;s--}while(ctx.measureText(name).width>NAME.max&&s>20);
     ctx.fillText(name,NAME.right,NAME.cy);
   }
-  const d=fmt(dt.value);
+  const d=fmt();
   if(d){ctx.direction='ltr';ctx.textAlign='right';ctx.font=`800 ${DATE.size}px Almarai`;ctx.fillText(d,DATE.right,DATE.cy)}
 }
 
 function applyLock(){
-  dt.disabled=lock.checked;
-  if(lock.checked&&dt.value)store.set('kashta-date',dt.value);
-  if(!lock.checked)store.del('kashta-date');
+  sels.forEach(x=>x.disabled=lock.checked);
+  if(lock.checked)store.set('kashta-date',fmt());else store.del('kashta-date');
 }
 
 const saved=store.get('kashta-date');
-if(saved){dt.value=saved;lock.checked=true;dt.disabled=true}
-lock.addEventListener('change',()=>{if(lock.checked&&!dt.value){lock.checked=false;dt.focus();return}applyLock()});
-nm.addEventListener('input',draw);dt.addEventListener('input',draw);
+if(saved){const[d,m,y]=saved.split('/');dd.value=d;mm.value=m;if(![...yy.options].some(o=>o.value===y))yy.add(new Option(y,y));yy.value=y;lock.checked=true;sels.forEach(x=>x.disabled=true)}
+lock.addEventListener('change',()=>{if(lock.checked&&!fmt()){lock.checked=false;(sels.find(x=>!x.value)||dd).focus();return}applyLock()});
+nm.addEventListener('input',draw);sels.forEach(x=>x.addEventListener('change',draw));
 base.onload=()=>document.fonts.load('800 40px Almarai').then(draw,draw);
 
 function blob(){return new Promise(r=>cv.toBlob(r,'image/jpeg',.92))}
