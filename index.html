@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>كشتة سارة</title>
+<meta name="description" content="دعوة كشتة سارة">
+<meta property="og:title" content="كشتة سارة">
+<meta property="og:image" content="base.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#17110c;--card:#221912;--line:rgba(247,236,217,.16);--cream:#f7ecd9;--sand:#e6c79a;--ember:#f08a3c}
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:radial-gradient(900px 600px at 80% -10%,#3a2618,transparent 60%),var(--ink);color:var(--cream);font-family:Almarai,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:32px 16px 48px;display:grid;grid-template-columns:1fr 380px;gap:32px;align-items:start}
+header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px}
+header h1{font-size:30px;font-weight:800}
+header span{font-size:14px;color:var(--sand)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:24px;position:sticky;top:24px}
+label{display:block;font-weight:700;font-size:15px;color:var(--sand);margin:18px 0 8px}
+label:first-child{margin-top:0}
+input[type=text],input[type=date]{width:100%;font:inherit;font-size:17px;color:var(--cream);background:#120d09;border:1px solid var(--line);border-radius:12px;padding:13px 14px;outline:none}
+input:focus{border-color:var(--ember)}
+input:disabled{opacity:.55}
+input[type=date]{color-scheme:dark;direction:ltr;text-align:right}
+.chk{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:15px;cursor:pointer;user-select:none}
+.chk input{width:20px;height:20px;accent-color:var(--ember)}
+.hint{font-size:13px;color:rgba(247,236,217,.55);margin-top:6px;line-height:1.7}
+.btn{display:flex;width:100%;justify-content:center;align-items:center;gap:8px;margin-top:22px;font:inherit;font-weight:800;font-size:17px;border:0;border-radius:14px;padding:15px;cursor:pointer;background:var(--ember);color:#fff}
+.btn.sec{background:transparent;border:1px solid var(--line);color:var(--cream);margin-top:10px}
+.btn:disabled{opacity:.5;cursor:default}
+.prev{border-radius:18px;overflow:hidden;border:1px solid var(--line);box-shadow:0 30px 60px rgba(0,0,0,.45)}
+canvas{display:block;width:100%;height:auto}
+@media (max-width:820px){.wrap{grid-template-columns:1fr}.panel{position:static;order:-1}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>كشتة سارة</h1><span>مولّد الدعوات</span></header>
+  <div class="prev"><canvas id="cv" width="1080" height="1620" aria-label="معاينة الدعوة"></canvas></div>
+  <div class="panel">
+    <label for="nm">اسم الضيف</label>
+    <input id="nm" type="text" placeholder="الأستاذة أميرة القحطاني" autocomplete="off">
+    <label for="dt">تاريخ الفعالية</label>
+    <input id="dt" type="date">
+    <label class="chk"><input id="lock" type="checkbox">ثبّت التاريخ</label>
+    <div class="hint">لما تثبّت التاريخ يبقى محفوظ لكل الدعوات الجاية على هالجهاز، وتكتب الاسم بس.</div>
+    <button class="btn" id="dl">حمّل الدعوة</button>
+    <button class="btn sec" id="sh" hidden>شارك الدعوة</button>
+  </div>
+</div>
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const nm=document.getElementById('nm'),dt=document.getElementById('dt'),lock=document.getElementById('lock');
+const base=new Image();base.src='base.jpg';
+const CREAM='rgb(247,236,217)';
+// مواقع النص مقاسة من التصميم الأصلي (1080×1620)
+const NAME={right:532,cy:757,max:460,size:40},DATE={right:913,cy:1420,size:34};
+
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+
+function fmt(v){if(!v)return'';const[y,m,d]=v.split('-');return `${+d}/${+m}/${y}`}
+
+function draw(){
+  if(!base.complete)return;
+  ctx.drawImage(base,0,0,1080,1620);
+  ctx.fillStyle=CREAM;ctx.textBaseline='middle';
+  const name=nm.value.trim();
+  if(name){
+    let s=NAME.size;ctx.direction='rtl';ctx.textAlign='right';
+    do{ctx.font=`800 ${s}px Almarai`;s--}while(ctx.measureText(name).width>NAME.max&&s>20);
+    ctx.fillText(name,NAME.right,NAME.cy);
+  }
+  const d=fmt(dt.value);
+  if(d){ctx.direction='ltr';ctx.textAlign='right';ctx.font=`800 ${DATE.size}px Almarai`;ctx.fillText(d,DATE.right,DATE.cy)}
+}
+
+function applyLock(){
+  dt.disabled=lock.checked;
+  if(lock.checked&&dt.value)store.set('kashta-date',dt.value);
+  if(!lock.checked)store.del('kashta-date');
+}
+
+const saved=store.get('kashta-date');
+if(saved){dt.value=saved;lock.checked=true;dt.disabled=true}
+lock.addEventListener('change',()=>{if(lock.checked&&!dt.value){lock.checked=false;dt.focus();return}applyLock()});
+nm.addEventListener('input',draw);dt.addEventListener('input',draw);
+base.onload=()=>document.fonts.load('800 40px Almarai').then(draw,draw);
+
+function blob(){return new Promise(r=>cv.toBlob(r,'image/jpeg',.92))}
+function fname(){return `دعوة-كشتة-سارة${nm.value.trim()?'-'+nm.value.trim():''}.jpg`}
+document.getElementById('dl').onclick=async()=>{
+  draw();const b=await blob();const a=document.createElement('a');
+  a.href=URL.createObjectURL(b);a.download=fname();a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+};
+const shBtn=document.getElementById('sh');
+if(navigator.canShare&&navigator.canShare({files:[new File([''],'x.jpg',{type:'image/jpeg'})]})){
+  shBtn.hidden=false;
+  shBtn.onclick=async()=>{draw();const f=new File([await blob()],fname(),{type:'image/jpeg'});try{await navigator.share({files:[f],title:'كشتة سارة'})}catch(e){}};
+}
+</script>
+</body>
+</html>
